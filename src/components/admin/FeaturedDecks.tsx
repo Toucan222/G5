@@ -22,12 +22,19 @@ export function FeaturedDecks({ decks, onUpdate }: FeaturedDecksProps) {
 
   const handleToggleFeatured = async (deckId: string, featured: boolean) => {
     setLoading(true)
-    await supabase
-      .from('decks')
-      .update({ is_featured: featured })
-      .eq('id', deckId)
-    onUpdate()
-    setLoading(false)
+    try {
+      const { error } = await supabase
+        .from('decks')
+        .update({ is_featured: featured })
+        .eq('id', deckId)
+
+      if (error) throw error
+      onUpdate()
+    } catch (error) {
+      console.error('Error updating deck:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -46,7 +53,9 @@ export function FeaturedDecks({ decks, onUpdate }: FeaturedDecksProps) {
             <Table.Td>{deck.title}</Table.Td>
             <Table.Td>{deck.user_email}</Table.Td>
             <Table.Td>
-              {new Date(deck.created_at).toLocaleDateString()}
+              <Text size="sm">
+                {new Date(deck.created_at).toLocaleDateString()}
+              </Text>
             </Table.Td>
             <Table.Td>
               <Switch

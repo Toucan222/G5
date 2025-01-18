@@ -24,6 +24,17 @@ export interface Database {
           last_sign_in?: string | null
         }
       }
+      decks: {
+        Row: {
+          id: string
+          title: string
+          description: string
+          created_at: string
+          user_id: string
+          is_featured: boolean
+          is_public: boolean
+        }
+      }
       cards: {
         Row: {
           id: string

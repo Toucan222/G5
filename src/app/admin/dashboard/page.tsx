@@ -6,6 +6,7 @@ import { Header } from '@/components/Header'
 import { AnalyticsOverview } from '@/components/admin/AnalyticsOverview'
 import { AnalyticsChart } from '@/components/admin/AnalyticsChart'
 import { UsersTable } from '@/components/admin/UsersTable'
+import { FeaturedDecks } from '@/components/admin/FeaturedDecks'
 import { useState, useEffect } from 'react'
 import { getAnalytics, type AnalyticsData } from '@/lib/analytics'
 
@@ -69,11 +70,14 @@ export default function AdminDashboard() {
               </Tabs.Panel>
 
               <Tabs.Panel value="decks" pt="md">
-                {/* Featured Decks management component */}
+                <FeaturedDecks decks={[]} onUpdate={() => {}} />
               </Tabs.Panel>
 
               <Tabs.Panel value="analytics" pt="md">
-                {/* Detailed analytics component */}
+                <Stack gap="md">
+                  <Title order={3}>Detailed Analytics</Title>
+                  {/* Add detailed analytics components here */}
+                </Stack>
               </Tabs.Panel>
             </Tabs>
           </Paper>
