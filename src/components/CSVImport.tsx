@@ -6,7 +6,29 @@ import { Dropzone } from '@mantine/dropzone'
 import { IconUpload, IconX, IconCheck } from '@tabler/icons-react'
 import Papa from 'papaparse'
 import { supabase } from '@/lib/supabase'
-import type { CSVCard, ParsedCard } from '@/types/csv'
+import { notifications } from '@mantine/notifications'
+
+interface CSVCard {
+  title: string
+  image_url?: string
+  quick_facts: string
+  scoreboard: string
+  text_block?: string
+  link_block?: string
+  audio_block?: string
+}
+
+interface ParsedCard {
+  title: string
+  image_url?: string
+  quick_facts: string[]
+  scoreboard: Record<string, number>
+  content_blocks: {
+    text?: string
+    link?: string
+    audio_url?: string
+  }[]
+}
 
 interface CSVImportProps {
   deckId: string
@@ -19,29 +41,41 @@ export function CSVImport({ deckId, onComplete }: CSVImportProps) {
   const [importing, setImporting] = useState(false)
 
   const parseCSV = (file: File) => {
-    Papa.parse(file, {
+    Papa.parse<CSVCard>(file, {
       header: true,
       complete: (results) => {
         try {
-          const parsed: ParsedCard[] = results.data.map((row: CSVCard) => ({
-            title: row.title,
-            image_url: row.image_url,
-            quick_facts: row.quick_facts.split('|').filter(Boolean),
-            scoreboard: JSON.parse(row.scoreboard),
-            content_blocks: [
-              row.text_block ? { text: row.text_block } : null,
-              row.link_block ? { link: row.link_block } : null,
-              row.audio_block ? { audio_url: row.audio_block } : null,
-            ].filter(Boolean)
-          }))
+          const parsed: ParsedCard[] = results.data
+            .filter(row => row.title) // Skip empty rows
+            .map(row => ({
+              title: row.title,
+              image_url: row.image_url,
+              quick_facts: row.quick_facts.split('|').filter(Boolean),
+              scoreboard: JSON.parse(row.scoreboard),
+              content_blocks: [
+                row.text_block ? { text: row.text_block } : null,
+                row.link_block ? { link: row.link_block } : null,
+                row.audio_block ? { audio_url: row.audio_block } : null,
+              ].filter(Boolean) as ParsedCard['content_blocks']
+            }))
           setParsedData(parsed)
           setError('')
         } catch (e) {
           setError('Invalid CSV format. Please check the template.')
+          notifications.show({
+            title: 'Error',
+            message: 'Failed to parse CSV file. Please check the format.',
+            color: 'red'
+          })
         }
       },
       error: () => {
         setError('Failed to parse CSV file.')
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to read CSV file.',
+          color: 'red'
+        })
       }
     })
   }
@@ -50,18 +84,32 @@ export function CSVImport({ deckId, onComplete }: CSVImportProps) {
     setImporting(true)
     try {
       for (const card of parsedData) {
-        await supabase
+        const { error } = await supabase
           .from('cards')
           .insert([{
             deck_id: deckId,
             ...card
           }])
+        
+        if (error) throw error
       }
+      
+      notifications.show({
+        title: 'Success',
+        message: `Imported ${parsedData.length} cards successfully.`,
+        color: 'green'
+      })
       onComplete()
     } catch (e) {
       setError('Failed to import cards.')
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to import cards. Please try again.',
+        color: 'red'
+      })
+    } finally {
+      setImporting(false)
     }
-    setImporting(false)
   }
 
   return (
