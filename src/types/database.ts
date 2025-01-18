@@ -24,6 +24,26 @@ export interface Database {
           last_sign_in?: string | null
         }
       }
+      customers: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_customer_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_customer_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_customer_id?: string
+          created_at?: string
+        }
+      }
       subscriptions: {
         Row: {
           id: string
