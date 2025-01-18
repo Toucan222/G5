@@ -10,12 +10,8 @@ import {
   Card,
   SimpleGrid,
   ThemeIcon,
-  Divider,
-  List,
-  Image,
-  rem,
   Box,
-  Accordion
+  rem
 } from '@mantine/core'
 import {
   IconBrain,
@@ -64,7 +60,7 @@ export default function LandingPage() {
         }}
       >
         <Container size="lg">
-          <Stack align="center" spacing="xl">
+          <Stack align="center" gap="xl">
             <Title
               order={1}
               size="h1"
@@ -102,7 +98,7 @@ export default function LandingPage() {
 
       {/* Demo Section */}
       <Container size="lg" py={80}>
-        <Stack spacing={50}>
+        <Stack gap={50}>
           <Title order={2} ta="center" mb="xl">
             Experience the Future of Learning
           </Title>
@@ -111,20 +107,30 @@ export default function LandingPage() {
               <Text size="lg" mb="md">
                 Our innovative 3-screen card system lets you:
               </Text>
-              <List
-                spacing="md"
-                size="lg"
-                icon={
-                  <ThemeIcon size={24} radius="xl" color="blue">
-                    <IconCheck size={16} />
-                  </ThemeIcon>
-                }
-              >
-                <List.Item>View quick facts and images at a glance</List.Item>
-                <List.Item>Compare detailed metrics and rankings</List.Item>
-                <List.Item>Access in-depth content and resources</List.Item>
-                <List.Item>Get AI-powered explanations</List.Item>
-              </List>
+              <Group gap="md">
+                <ThemeIcon size={24} radius="xl" color="blue">
+                  <IconCheck size={16} />
+                </ThemeIcon>
+                <Text>View quick facts and images at a glance</Text>
+              </Group>
+              <Group gap="md">
+                <ThemeIcon size={24} radius="xl" color="blue">
+                  <IconCheck size={16} />
+                </ThemeIcon>
+                <Text>Compare detailed metrics and rankings</Text>
+              </Group>
+              <Group gap="md">
+                <ThemeIcon size={24} radius="xl" color="blue">
+                  <IconCheck size={16} />
+                </ThemeIcon>
+                <Text>Access in-depth content and resources</Text>
+              </Group>
+              <Group gap="md">
+                <ThemeIcon size={24} radius="xl" color="blue">
+                  <IconCheck size={16} />
+                </ThemeIcon>
+                <Text>Get AI-powered explanations</Text>
+              </Group>
             </Stack>
             <DemoCard />
           </SimpleGrid>
@@ -161,59 +167,10 @@ export default function LandingPage() {
         </Container>
       </Box>
 
-      {/* FAQ Section */}
-      <Container size="lg" py={80}>
-        <Title order={2} ta="center" mb={50}>
-          Frequently Asked Questions
-        </Title>
-        <Accordion variant="separated">
-          <Accordion.Item value="what">
-            <Accordion.Control>What is FlashRank?</Accordion.Control>
-            <Accordion.Panel>
-              FlashRank is a modern learning platform that combines interactive
-              flashcards with powerful ranking and comparison tools. It's designed
-              to help you discover and understand information in a more engaging
-              way.
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          <Accordion.Item value="different">
-            <Accordion.Control>
-              How is it different from regular flashcards?
-            </Accordion.Control>
-            <Accordion.Panel>
-              Unlike traditional flashcards, FlashRank offers a multi-dimensional
-              learning experience with scoreboard metrics, AI explanations, and
-              interactive features that help you understand relationships between
-              different pieces of information.
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          <Accordion.Item value="ai">
-            <Accordion.Control>How does the AI feature work?</Accordion.Control>
-            <Accordion.Panel>
-              Our AI system analyzes card content and generates intelligent
-              explanations, helping you understand complex relationships and
-              patterns. It can also suggest labels and provide additional context
-              for better learning.
-            </Accordion.Panel>
-          </Accordion.Item>
-
-          <Accordion.Item value="free">
-            <Accordion.Control>Is it free to use?</Accordion.Control>
-            <Accordion.Panel>
-              FlashRank offers both free and premium tiers. The free tier includes
-              basic features like creating up to 3 decks and 50 cards per deck.
-              Premium users get unlimited decks, advanced AI features, and more.
-            </Accordion.Panel>
-          </Accordion.Item>
-        </Accordion>
-      </Container>
-
       {/* CTA Section */}
       <Box bg="blue.6" c="white" py={80}>
         <Container size="lg">
-          <Stack align="center" spacing="xl">
+          <Stack align="center" gap="xl">
             <Title order={2} ta="center">
               Ready to Transform Your Learning?
             </Title>
