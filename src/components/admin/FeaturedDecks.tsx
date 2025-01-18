@@ -1,39 +1,43 @@
 'use client'
 
-import { Table, Switch, Text, Group, Stack } from '@mantine/core'
+import { Table, Switch, Text, Group, Stack, Badge } from '@mantine/core'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
 
-type Deck = Database['public']['Tables']['decks']['Row']
+type Deck = Database['public']['Tables']['decks']['Row'] & {
+  profiles: {
+    user_id: string
+  } | null
+}
 
 export function FeaturedDecks() {
   const [decks, setDecks] = useState<Deck[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchDecks = async () => {
-      try {
-        const { data } = await supabase
-          .from('decks')
-          .select(`
-            *,
-            profiles (
-              user_id
-            )
-          `)
-          .order('created_at', { ascending: false })
+  const fetchDecks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('decks')
+        .select(`
+          *,
+          profiles (
+            user_id
+          )
+        `)
+        .order('created_at', { ascending: false })
 
-        if (data) {
-          setDecks(data)
-        }
-      } catch (error) {
-        console.error('Error fetching decks:', error)
-      } finally {
-        setLoading(false)
-      }
+      if (error) throw error
+
+      setDecks(data || [])
+    } catch (error) {
+      console.error('Error fetching decks:', error)
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchDecks()
   }, [])
 
@@ -56,8 +60,31 @@ export function FeaturedDecks() {
     }
   }
 
+  const handleTogglePublic = async (deckId: string, isPublic: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('decks')
+        .update({ is_public: isPublic })
+        .eq('id', deckId)
+
+      if (error) throw error
+
+      setDecks(decks.map(deck => 
+        deck.id === deckId 
+          ? { ...deck, is_public: isPublic }
+          : deck
+      ))
+    } catch (error) {
+      console.error('Error updating deck:', error)
+    }
+  }
+
   if (loading) {
-    return <Text>Loading decks...</Text>
+    return (
+      <Stack align="center" py="xl">
+        <Text>Loading decks...</Text>
+      </Stack>
+    )
   }
 
   if (decks.length === 0) {
@@ -74,6 +101,7 @@ export function FeaturedDecks() {
         <Table.Tr>
           <Table.Th>Title</Table.Th>
           <Table.Th>Created</Table.Th>
+          <Table.Th>Status</Table.Th>
           <Table.Th>Public</Table.Th>
           <Table.Th>Featured</Table.Th>
         </Table.Tr>
@@ -88,10 +116,17 @@ export function FeaturedDecks() {
               </Text>
             </Table.Td>
             <Table.Td>
+              <Badge 
+                color={deck.is_featured ? 'yellow' : deck.is_public ? 'blue' : 'gray'}
+              >
+                {deck.is_featured ? 'Featured' : deck.is_public ? 'Public' : 'Private'}
+              </Badge>
+            </Table.Td>
+            <Table.Td>
               <Switch
                 checked={deck.is_public}
                 onChange={(event) => 
-                  handleToggleFeatured(deck.id, event.currentTarget.checked)
+                  handleTogglePublic(deck.id, event.currentTarget.checked)
                 }
                 disabled={loading}
               />
@@ -102,7 +137,7 @@ export function FeaturedDecks() {
                 onChange={(event) => 
                   handleToggleFeatured(deck.id, event.currentTarget.checked)
                 }
-                disabled={loading}
+                disabled={loading || !deck.is_public}
               />
             </Table.Td>
           </Table.Tr>
