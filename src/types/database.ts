@@ -24,41 +24,28 @@ export interface Database {
           last_sign_in?: string | null
         }
       }
-      decks: {
+      // Optional tables for when Stripe is configured
+      customers?: {
         Row: {
           id: string
-          title: string
-          description: string
-          created_at: string
           user_id: string
-          is_featured: boolean
-          is_public: boolean
-        }
-      }
-      cards: {
-        Row: {
-          id: string
-          deck_id: string
-          title: string
-          image_url?: string
-          quick_facts: string[]
-          scoreboard: Record<string, number>
-          content_blocks: Array<{
-            text?: string
-            link?: string
-            audio_url?: string
-          }>
+          stripe_customer_id: string
           created_at: string
         }
       }
-      ai_summaries: {
+      subscriptions?: {
         Row: {
           id: string
-          card_id: string
-          summary: string
-          generated_at: string
+          user_id: string
+          stripe_subscription_id: string
+          stripe_customer_id: string
+          status: string
+          price_id: string
+          current_period_end: string
+          created_at: string
         }
       }
+      // ... other tables
     }
   }
 }

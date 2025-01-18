@@ -1,12 +1,11 @@
 'use client'
 
-import { Container, Title, SimpleGrid, Alert } from '@mantine/core'
-import { IconAlertCircle } from '@tabler/icons-react'
+import { Container, Title, SimpleGrid, Alert, Text } from '@mantine/core'
+import { IconAlertCircle, IconInfoCircle } from '@tabler/icons-react'
 import { Header } from '@/components/Header'
 import { PricingCard } from '@/components/PricingCard'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import { notifications } from '@mantine/notifications'
 
 const PRICING_PLANS = [
@@ -23,7 +22,7 @@ const PRICING_PLANS = [
   {
     title: 'Pro',
     price: '$9.99/month',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'pro_placeholder',
     features: [
       'Unlimited decks',
       'Unlimited cards',
@@ -52,42 +51,38 @@ export default function Pricing() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const canceled = searchParams.get('canceled')
+  const demo = searchParams.get('demo')
 
   const handleSubscribe = async (priceId: string) => {
+    setLoading(true)
     try {
-      setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        notifications.show({
-          title: 'Authentication Required',
-          message: 'Please log in to subscribe.',
-          color: 'blue'
-        })
-        router.push('/auth/login')
-        return
-      }
-
       const response = await fetch('/api/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, userId: user.id })
+        body: JSON.stringify({ priceId })
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session')
+        throw new Error(data.message || 'Failed to start subscription process')
       }
 
-      if (data.url) {
-        window.location.href = data.url
+      if (data.message) {
+        notifications.show({
+          title: 'Development Mode',
+          message: data.message,
+          color: 'blue'
+        })
       }
+
+      // In development, just redirect to dashboard
+      router.push(data.url || '/dashboard?demo=true')
     } catch (error) {
       console.error('Subscription error:', error)
       notifications.show({
         title: 'Error',
-        message: error instanceof Error ? error.message : 'Failed to start subscription process',
+        message: error instanceof Error ? error.message : 'Failed to process subscription',
         color: 'red'
       })
     } finally {
@@ -100,6 +95,16 @@ export default function Pricing() {
       <Header />
       <Container size="lg" mt="xl">
         <Title ta="center" mb="xl">Choose Your Plan</Title>
+
+        {!process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID && (
+          <Alert 
+            icon={<IconInfoCircle size={16} />}
+            color="blue"
+            mb="xl"
+          >
+            <Text>Development Mode: Stripe payments are not configured. Subscriptions will be simulated.</Text>
+          </Alert>
+        )}
 
         {canceled && (
           <Alert 

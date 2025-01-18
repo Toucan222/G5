@@ -1,34 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Group, Text, Button, Table, Alert, Stack, rem } from '@mantine/core'
+import { Group, Text, Button, Table, Alert, Stack, Box } from '@mantine/core'
 import { Dropzone } from '@mantine/dropzone'
-import { IconUpload, IconX, IconCheck } from '@tabler/icons-react'
+import { IconUpload, IconX, IconCheck, IconDownload } from '@tabler/icons-react'
 import Papa from 'papaparse'
-import { supabase } from '@/lib/supabase'
 import { notifications } from '@mantine/notifications'
-
-interface CSVCard {
-  title: string
-  image_url?: string
-  quick_facts: string
-  scoreboard: string
-  text_block?: string
-  link_block?: string
-  audio_block?: string
-}
-
-interface ParsedCard {
-  title: string
-  image_url?: string
-  quick_facts: string[]
-  scoreboard: Record<string, number>
-  content_blocks: {
-    text?: string
-    link?: string
-    audio_url?: string
-  }[]
-}
+import { generateCSVTemplate, validateCSVRow } from '@/lib/csv-template'
 
 interface CSVImportProps {
   deckId: string
@@ -36,36 +14,62 @@ interface CSVImportProps {
 }
 
 export function CSVImport({ deckId, onComplete }: CSVImportProps) {
-  const [parsedData, setParsedData] = useState<ParsedCard[]>([])
-  const [error, setError] = useState<string>('')
+  const [parsedData, setParsedData] = useState<any[]>([])
+  const [errors, setErrors] = useState<string[]>([])
   const [importing, setImporting] = useState(false)
 
+  const downloadTemplate = () => {
+    const blob = new Blob([generateCSVTemplate()], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'flashrank-template.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
   const parseCSV = (file: File) => {
-    Papa.parse<CSVCard>(file, {
+    Papa.parse(file, {
       header: true,
       complete: (results) => {
-        try {
-          const parsed: ParsedCard[] = results.data
-            .filter(row => row.title)
-            .map(row => ({
-              title: row.title,
-              image_url: row.image_url,
-              quick_facts: row.quick_facts.split('|').filter(Boolean),
-              scoreboard: JSON.parse(row.scoreboard),
-              content_blocks: [
-                row.text_block ? { text: row.text_block } : null,
-                row.link_block ? { link: row.link_block } : null,
-                row.audio_block ? { audio_url: row.audio_block } : null,
-              ].filter(Boolean) as ParsedCard['content_blocks']
-            }))
-          setParsedData(parsed)
-          setError('')
-        } catch (e) {
-          setError('Invalid CSV format. Please check the template.')
+        const allErrors: string[] = []
+        const validData = results.data.filter((row: any) => {
+          const rowErrors = validateCSVRow(row)
+          if (rowErrors.length) {
+            allErrors.push(`Row "${row.title}": ${rowErrors.join(', ')}`)
+            return false
+          }
+          return true
+        })
+
+        setParsedData(validData)
+        setErrors(allErrors)
+
+        if (validData.length > 0) {
+          notifications.show({
+            title: 'CSV Parsed',
+            message: `Successfully parsed ${validData.length} cards`,
+            color: 'green'
+          })
+        }
+
+        if (allErrors.length > 0) {
+          notifications.show({
+            title: 'Some rows had errors',
+            message: 'Check the error list below',
+            color: 'yellow'
+          })
         }
       },
-      error: () => {
-        setError('Failed to parse CSV file.')
+      error: (error) => {
+        setErrors(['Failed to parse CSV file: ' + error.message])
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to parse CSV file',
+          color: 'red'
+        })
       }
     })
   }
@@ -73,19 +77,44 @@ export function CSVImport({ deckId, onComplete }: CSVImportProps) {
   const handleImport = async () => {
     setImporting(true)
     try {
-      for (const card of parsedData) {
+      const formattedData = parsedData.map(row => ({
+        deck_id: deckId,
+        title: row.title,
+        image_url: row.image_url || null,
+        quick_facts: row.quick_facts.split('|').filter(Boolean),
+        scoreboard: JSON.parse(row.scoreboard || '{}'),
+        content_blocks: [
+          row.text_block ? { text: row.text_block } : null,
+          row.link_block ? { link: row.link_block } : null,
+          row.audio_block ? { audio_url: row.audio_block } : null,
+        ].filter(Boolean)
+      }))
+
+      // Import in batches to avoid timeouts
+      const BATCH_SIZE = 50
+      for (let i = 0; i < formattedData.length; i += BATCH_SIZE) {
+        const batch = formattedData.slice(i, i + BATCH_SIZE)
         const { error } = await supabase
           .from('cards')
-          .insert([{
-            deck_id: deckId,
-            ...card
-          }])
-        
+          .insert(batch)
+
         if (error) throw error
       }
+
+      notifications.show({
+        title: 'Success',
+        message: `Imported ${formattedData.length} cards successfully`,
+        color: 'green'
+      })
+
       onComplete()
-    } catch (e) {
-      setError('Failed to import cards.')
+    } catch (error) {
+      console.error('Import error:', error)
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to import cards',
+        color: 'red'
+      })
     } finally {
       setImporting(false)
     }
@@ -93,9 +122,23 @@ export function CSVImport({ deckId, onComplete }: CSVImportProps) {
 
   return (
     <Stack gap="md">
-      {error && (
-        <Alert color="red" title="Error">
-          {error}
+      <Group justify="flex-end">
+        <Button
+          variant="light"
+          leftSection={<IconDownload size={16} />}
+          onClick={downloadTemplate}
+        >
+          Download Template
+        </Button>
+      </Group>
+
+      {errors.length > 0 && (
+        <Alert color="red" title="Import Errors">
+          <Stack gap="xs">
+            {errors.map((error, index) => (
+              <Text key={index} size="sm">{error}</Text>
+            ))}
+          </Stack>
         </Alert>
       )}
 
@@ -105,15 +148,15 @@ export function CSVImport({ deckId, onComplete }: CSVImportProps) {
           accept={['text/csv']}
           maxSize={5 * 1024 ** 2}
         >
-          <Group justify="center" gap="xl" style={{ minHeight: rem(120), pointerEvents: 'none' }}>
+          <Group justify="center" gap="xl" style={{ minHeight: 120, pointerEvents: 'none' }}>
             <Dropzone.Accept>
-              <IconCheck size={50} />
+              <IconCheck size={50} stroke={1.5} />
             </Dropzone.Accept>
             <Dropzone.Reject>
-              <IconX size={50} />
+              <IconX size={50} stroke={1.5} />
             </Dropzone.Reject>
             <Dropzone.Idle>
-              <IconUpload size={50} />
+              <IconUpload size={50} stroke={1.5} />
             </Dropzone.Idle>
 
             <div>
@@ -127,8 +170,8 @@ export function CSVImport({ deckId, onComplete }: CSVImportProps) {
           </Group>
         </Dropzone>
       ) : (
-        <>
-          <Table>
+        <Box>
+          <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Title</Table.Th>
@@ -137,33 +180,35 @@ export function CSVImport({ deckId, onComplete }: CSVImportProps) {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {parsedData.map((card, index) => (
+              {parsedData.map((row, index) => (
                 <Table.Tr key={index}>
-                  <Table.Td>{card.title}</Table.Td>
-                  <Table.Td>{card.quick_facts.join(', ')}</Table.Td>
-                  <Table.Td>
-                    {Object.entries(card.scoreboard)
-                      .map(([key, value]) => `${key}: ${value}`)
-                      .join(', ')}
-                  </Table.Td>
+                  <Table.Td>{row.title}</Table.Td>
+                  <Table.Td>{row.quick_facts}</Table.Td>
+                  <Table.Td>{row.scoreboard}</Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>
           </Table>
 
-          <Group justify="space-between">
-            <Button variant="light" onClick={() => setParsedData([])}>
+          <Group justify="space-between" mt="md">
+            <Button 
+              variant="light" 
+              onClick={() => {
+                setParsedData([])
+                setErrors([])
+              }}
+            >
               Cancel
             </Button>
-            <Button 
-              onClick={handleImport} 
+            <Button
+              onClick={handleImport}
               loading={importing}
               disabled={parsedData.length === 0}
             >
               Import {parsedData.length} Cards
             </Button>
           </Group>
-        </>
+        </Box>
       )}
     </Stack>
   )
