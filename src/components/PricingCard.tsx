@@ -23,7 +23,7 @@ export function PricingCard({
   loading
 }: PricingCardProps) {
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
+    <Card shadow="sm" p="lg" radius="md" withBorder>
       <Group justify="space-between" mb="md">
         <Text size="xl" fw={500}>{title}</Text>
         {popular && <Badge color="blue">Most Popular</Badge>}
@@ -50,6 +50,7 @@ export function PricingCard({
         onClick={() => priceId && onSubscribe?.(priceId)}
         loading={loading}
         disabled={!priceId}
+        variant={popular ? 'filled' : 'light'}
       >
         {priceId ? 'Subscribe Now' : 'Coming Soon'}
       </Button>

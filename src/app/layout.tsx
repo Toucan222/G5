@@ -18,10 +18,17 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <ColorSchemeScript />
+        <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width" />
       </head>
       <body>
-        <MantineProvider>
-          <Notifications position="top-right" />
+        <MantineProvider
+          withNormalizeCSS
+          theme={{
+            primaryColor: 'blue',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+          }}
+        >
+          <Notifications position="top-right" zIndex={2077} />
           {children}
         </MantineProvider>
       </body>
