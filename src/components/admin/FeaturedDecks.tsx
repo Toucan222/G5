@@ -1,27 +1,43 @@
 'use client'
 
-import { Table, Switch, Text, Group } from '@mantine/core'
-import { useState } from 'react'
+import { Table, Switch, Text, Group, Stack } from '@mantine/core'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database'
 
-interface Deck {
-  id: string
-  title: string
-  created_at: string
-  is_featured: boolean
-  user_email: string
-}
+type Deck = Database['public']['Tables']['decks']['Row']
 
-interface FeaturedDecksProps {
-  decks: Deck[]
-  onUpdate: () => void
-}
+export function FeaturedDecks() {
+  const [decks, setDecks] = useState<Deck[]>([])
+  const [loading, setLoading] = useState(true)
 
-export function FeaturedDecks({ decks, onUpdate }: FeaturedDecksProps) {
-  const [loading, setLoading] = useState(false)
+  useEffect(() => {
+    const fetchDecks = async () => {
+      try {
+        const { data } = await supabase
+          .from('decks')
+          .select(`
+            *,
+            profiles (
+              user_id
+            )
+          `)
+          .order('created_at', { ascending: false })
+
+        if (data) {
+          setDecks(data)
+        }
+      } catch (error) {
+        console.error('Error fetching decks:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDecks()
+  }, [])
 
   const handleToggleFeatured = async (deckId: string, featured: boolean) => {
-    setLoading(true)
     try {
       const { error } = await supabase
         .from('decks')
@@ -29,12 +45,27 @@ export function FeaturedDecks({ decks, onUpdate }: FeaturedDecksProps) {
         .eq('id', deckId)
 
       if (error) throw error
-      onUpdate()
+
+      setDecks(decks.map(deck => 
+        deck.id === deckId 
+          ? { ...deck, is_featured: featured }
+          : deck
+      ))
     } catch (error) {
       console.error('Error updating deck:', error)
-    } finally {
-      setLoading(false)
     }
+  }
+
+  if (loading) {
+    return <Text>Loading decks...</Text>
+  }
+
+  if (decks.length === 0) {
+    return (
+      <Stack align="center" py="xl">
+        <Text c="dimmed">No decks available</Text>
+      </Stack>
+    )
   }
 
   return (
@@ -42,8 +73,8 @@ export function FeaturedDecks({ decks, onUpdate }: FeaturedDecksProps) {
       <Table.Thead>
         <Table.Tr>
           <Table.Th>Title</Table.Th>
-          <Table.Th>Creator</Table.Th>
           <Table.Th>Created</Table.Th>
+          <Table.Th>Public</Table.Th>
           <Table.Th>Featured</Table.Th>
         </Table.Tr>
       </Table.Thead>
@@ -51,7 +82,6 @@ export function FeaturedDecks({ decks, onUpdate }: FeaturedDecksProps) {
         {decks.map((deck) => (
           <Table.Tr key={deck.id}>
             <Table.Td>{deck.title}</Table.Td>
-            <Table.Td>{deck.user_email}</Table.Td>
             <Table.Td>
               <Text size="sm">
                 {new Date(deck.created_at).toLocaleDateString()}
@@ -59,7 +89,16 @@ export function FeaturedDecks({ decks, onUpdate }: FeaturedDecksProps) {
             </Table.Td>
             <Table.Td>
               <Switch
-                checked={deck.is_featured}
+                checked={deck.is_public}
+                onChange={(event) => 
+                  handleToggleFeatured(deck.id, event.currentTarget.checked)
+                }
+                disabled={loading}
+              />
+            </Table.Td>
+            <Table.Td>
+              <Switch
+                checked={deck.is_featured || false}
                 onChange={(event) => 
                   handleToggleFeatured(deck.id, event.currentTarget.checked)
                 }

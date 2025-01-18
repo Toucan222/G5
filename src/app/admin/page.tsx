@@ -1,10 +1,11 @@
 'use client'
 
-import { Container, Title, Tabs, Paper } from '@mantine/core'
+import { Container, Title, Tabs, Paper, Text } from '@mantine/core'
 import { IconUsers, IconCards } from '@tabler/icons-react'
 import { Header } from '@/components/Header'
 import { StatsOverview } from '@/components/admin/StatsOverview'
 import { UsersTable } from '@/components/admin/UsersTable'
+import { FeaturedDecks } from '@/components/admin/FeaturedDecks'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database'
@@ -78,7 +79,16 @@ export default function AdminDashboard() {
     fetchData()
   }, [])
 
-  if (loading) return null
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <Container size="lg" mt="xl">
+          <Text>Loading...</Text>
+        </Container>
+      </>
+    )
+  }
 
   return (
     <>
@@ -110,7 +120,7 @@ export default function AdminDashboard() {
             </Tabs.Panel>
 
             <Tabs.Panel value="decks" pt="md">
-              <Text>Featured Decks management coming soon</Text>
+              <FeaturedDecks />
             </Tabs.Panel>
           </Tabs>
         </Paper>
