@@ -24,32 +24,28 @@ export interface Database {
           last_sign_in?: string | null
         }
       }
-      customers: {
+      cards: {
         Row: {
           id: string
-          user_id: string
-          stripe_customer_id: string
+          deck_id: string
+          title: string
+          image_url?: string
+          quick_facts: string[]
+          scoreboard: Record<string, number>
+          content_blocks: Array<{
+            text?: string
+            link?: string
+            audio_url?: string
+          }>
           created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          stripe_customer_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          stripe_customer_id?: string
-          created_at?: string
         }
       }
-      subscriptions: {
+      ai_summaries: {
         Row: {
           id: string
-          user_id: string
-          status: string
-          created_at: string
+          card_id: string
+          summary: string
+          generated_at: string
         }
       }
     }

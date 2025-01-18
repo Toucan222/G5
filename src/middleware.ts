@@ -36,7 +36,6 @@ export async function middleware(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Protected routes check
   if (!session && (
     request.nextUrl.pathname.startsWith('/dashboard') || 
     request.nextUrl.pathname.startsWith('/admin')
@@ -44,7 +43,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // Admin routes check
   if (request.nextUrl.pathname.startsWith('/admin')) {
     const { data: profile } = await supabase
       .from('profiles')

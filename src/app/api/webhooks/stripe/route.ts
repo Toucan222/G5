@@ -1,6 +1,7 @@
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
+import { NextResponse } from 'next/server'
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
@@ -14,13 +15,13 @@ export async function POST(req: Request) {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-        const subscription = event.data.object
-        await supabase
+        const subscription = event.data.object as Stripe.Subscription
+        await supabaseAdmin
           .from('subscriptions')
           .upsert({
             user_id: subscription.metadata.user_id,
             stripe_subscription_id: subscription.id,
-            stripe_customer_id: subscription.customer,
+            stripe_customer_id: subscription.customer as string,
             status: subscription.status,
             price_id: subscription.items.data[0].price.id,
             current_period_end: new Date(subscription.current_period_end * 1000)
@@ -28,18 +29,19 @@ export async function POST(req: Request) {
         break
 
       case 'customer.subscription.deleted':
-        const deletedSubscription = event.data.object
-        await supabase
+        const deletedSubscription = event.data.object as Stripe.Subscription
+        await supabaseAdmin
           .from('subscriptions')
           .update({ status: 'canceled' })
           .eq('stripe_subscription_id', deletedSubscription.id)
         break
     }
 
-    return new Response(JSON.stringify({ received: true }), { status: 200 })
+    return NextResponse.json({ received: true })
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Webhook signature verification failed' }), 
+    console.error('Webhook error:', err)
+    return NextResponse.json(
+      { error: 'Webhook signature verification failed' },
       { status: 400 }
     )
   }

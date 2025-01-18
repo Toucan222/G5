@@ -3,7 +3,13 @@
 import { Table, TextInput, Group, Text, Button, Menu, ActionIcon, ScrollArea } from '@mantine/core'
 import { IconArrowUp, IconArrowDown, IconSearch, IconAdjustments } from '@tabler/icons-react'
 import { useState, useMemo } from 'react'
-import { Card } from '@/types/deck'
+
+interface Card {
+  id: string
+  title: string
+  quick_facts: string[]
+  scoreboard: Record<string, number>
+}
 
 interface DeckTableProps {
   cards: Card[]
@@ -15,7 +21,6 @@ export function DeckTable({ cards }: DeckTableProps) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([])
 
-  // Get all unique scoreboard metrics across all cards
   const availableMetrics = useMemo(() => {
     const metrics = new Set<string>()
     cards.forEach(card => {
@@ -24,7 +29,6 @@ export function DeckTable({ cards }: DeckTableProps) {
     return Array.from(metrics)
   }, [cards])
 
-  // Initialize selected metrics if empty
   if (selectedMetrics.length === 0 && availableMetrics.length > 0) {
     setSelectedMetrics([availableMetrics[0]])
   }
@@ -55,14 +59,6 @@ export function DeckTable({ cards }: DeckTableProps) {
     }
   }
 
-  const toggleMetric = (metric: string) => {
-    setSelectedMetrics(current => 
-      current.includes(metric)
-        ? current.filter(m => m !== metric)
-        : [...current, metric]
-    )
-  }
-
   return (
     <>
       <Group justify="space-between" mb="md">
@@ -85,7 +81,13 @@ export function DeckTable({ cards }: DeckTableProps) {
             {availableMetrics.map(metric => (
               <Menu.Item
                 key={metric}
-                onClick={() => toggleMetric(metric)}
+                onClick={() => {
+                  setSelectedMetrics(current => 
+                    current.includes(metric)
+                      ? current.filter(m => m !== metric)
+                      : [...current, metric]
+                  )
+                }}
                 rightSection={selectedMetrics.includes(metric) ? '✓' : null}
               >
                 {metric}
@@ -107,7 +109,10 @@ export function DeckTable({ cards }: DeckTableProps) {
                     {metric}
                     {sortBy === metric && (
                       <ActionIcon size="sm" variant="subtle">
-                        {sortDirection === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />}
+                        {sortDirection === 'asc' ? 
+                          <IconArrowUp size={14} /> : 
+                          <IconArrowDown size={14} />
+                        }
                       </ActionIcon>
                     )}
                   </Group>

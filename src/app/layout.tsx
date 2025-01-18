@@ -1,5 +1,6 @@
 import { MantineProvider, ColorSchemeScript } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
 import '@mantine/dropzone/styles.css'
@@ -21,16 +22,18 @@ export default function RootLayout({
         <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width" />
       </head>
       <body>
-        <MantineProvider
-          withNormalizeCSS
-          theme={{
-            primaryColor: 'blue',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-          }}
-        >
-          <Notifications position="top-right" zIndex={2077} />
-          {children}
-        </MantineProvider>
+        <ErrorBoundary>
+          <MantineProvider
+            withNormalizeCSS
+            theme={{
+              primaryColor: 'blue',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+            }}
+          >
+            <Notifications position="top-right" zIndex={2077} />
+            {children}
+          </MantineProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

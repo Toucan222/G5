@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, Text, Button, List, Group, Badge } from '@mantine/core'
+import { Card, Text, Button, List, Group, Badge, Stack } from '@mantine/core'
 import { IconCheck } from '@tabler/icons-react'
 
 interface PricingCardProps {
@@ -24,36 +24,41 @@ export function PricingCard({
 }: PricingCardProps) {
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder>
-      <Group justify="space-between" mb="md">
-        <Text size="xl" fw={500}>{title}</Text>
-        {popular && <Badge color="blue">Most Popular</Badge>}
-      </Group>
+      <Stack gap="md">
+        <Group justify="space-between">
+          <Text size="xl" fw={500}>{title}</Text>
+          {popular && <Badge color="blue">Most Popular</Badge>}
+        </Group>
 
-      <Text size="xl" fw={700} mb="md">
-        {price}
-      </Text>
+        <Text size="xl" fw={700}>
+          {price}
+        </Text>
 
-      <List
-        spacing="sm"
-        size="sm"
-        mb="xl"
-        center
-        icon={<IconCheck size={16} style={{ color: 'var(--mantine-color-blue-filled)' }} />}
-      >
-        {features.map((feature, index) => (
-          <List.Item key={index}>{feature}</List.Item>
-        ))}
-      </List>
+        <List
+          spacing="sm"
+          size="sm"
+          center
+          icon={
+            <ThemeIcon size={20} radius="xl" color="blue">
+              <IconCheck size={12} />
+            </ThemeIcon>
+          }
+        >
+          {features.map((feature, index) => (
+            <List.Item key={index}>{feature}</List.Item>
+          ))}
+        </List>
 
-      <Button
-        fullWidth
-        onClick={() => priceId && onSubscribe?.(priceId)}
-        loading={loading}
-        disabled={!priceId}
-        variant={popular ? 'filled' : 'light'}
-      >
-        {priceId ? 'Subscribe Now' : 'Coming Soon'}
-      </Button>
+        <Button
+          fullWidth
+          onClick={() => priceId && onSubscribe?.(priceId)}
+          loading={loading}
+          disabled={!priceId}
+          variant={popular ? 'filled' : 'light'}
+        >
+          {priceId ? 'Subscribe Now' : 'Coming Soon'}
+        </Button>
+      </Stack>
     </Card>
   )
 }

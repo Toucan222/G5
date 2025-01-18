@@ -41,28 +41,29 @@ export function CardExplainer({ cardId, title, facts, scoreboard }: CardExplaine
       }
 
       // Generate new summary
-      const { data: { user } } = await supabase.auth.getUser()
       const response = await fetch('/api/ai/explain-card', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cardId,
-          userId: user?.id
+          title,
+          facts,
+          scoreboard
         })
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setSummary(data.summary)
-      } else {
-        setError(data.error || 'Failed to generate summary')
+      if (!response.ok) {
+        throw new Error('Failed to generate summary')
       }
-    } catch (err) {
-      setError('An error occurred while generating the summary')
-    }
 
-    setLoading(false)
+      const data = await response.json()
+      setSummary(data.summary)
+    } catch (err) {
+      setError('Failed to generate explanation')
+      console.error('AI Summary error:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -70,7 +71,10 @@ export function CardExplainer({ cardId, title, facts, scoreboard }: CardExplaine
       <Popover.Target>
         <Button
           variant="light"
-          leftSection={loading ? <IconLoader2 className="animate-spin" /> : <IconBrain />}
+          leftSection={loading ? 
+            <IconLoader2 className="animate-spin" /> : 
+            <IconBrain />
+          }
           onClick={fetchSummary}
           loading={loading}
         >
@@ -79,7 +83,7 @@ export function CardExplainer({ cardId, title, facts, scoreboard }: CardExplaine
       </Popover.Target>
 
       <Popover.Dropdown>
-        <Stack>
+        <Stack gap="sm">
           {error ? (
             <Text c="red" size="sm">{error}</Text>
           ) : summary ? (

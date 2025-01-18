@@ -1,57 +1,61 @@
-import { generateCardSummary } from '@/lib/openai'
-import { supabase } from '@/lib/supabase'
-import { rateLimit } from '@/lib/rate-limit'
+import { OpenAI } from 'openai'
+import { supabaseAdmin } from '@/lib/supabase'
+import { NextResponse } from 'next/server'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
 
 export async function POST(req: Request) {
   try {
-    const { cardId, userId } = await req.json()
+    const { cardId, title, facts, scoreboard } = await req.json()
 
-    // Rate limiting: 10 requests per hour per user
-    const identifier = `explain-card-${userId}`
-    const { success } = await rateLimit(identifier, 10, 3600)
-    
-    if (!success) {
-      return new Response(
-        JSON.stringify({ error: 'Rate limit exceeded. Try again later.' }), 
-        { status: 429 }
+    if (!cardId || !title) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
       )
     }
 
-    // Get card data
-    const { data: card } = await supabase
-      .from('cards')
-      .select('*')
-      .eq('id', cardId)
-      .single()
+    const prompt = `
+Summarize this trading card data in a concise, engaging way:
 
-    if (!card) {
-      return new Response(
-        JSON.stringify({ error: 'Card not found' }), 
-        { status: 404 }
-      )
+Title: ${title}
+Quick Facts: ${facts.join(', ')}
+Scores: ${Object.entries(scoreboard)
+  .map(([key, value]) => `${key}: ${value}`)
+  .join(', ')}
+
+Provide a 2-3 sentence summary highlighting the most interesting aspects.
+`
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 150,
+      temperature: 0.7
+    })
+
+    const summary = completion.choices[0].message.content
+
+    if (summary) {
+      // Cache the summary
+      await supabaseAdmin
+        .from('ai_summaries')
+        .upsert({
+          card_id: cardId,
+          summary,
+          generated_at: new Date().toISOString()
+        })
+
+      return NextResponse.json({ summary })
     }
 
-    // Generate summary
-    const summary = await generateCardSummary(
-      card.title,
-      card.quick_facts,
-      card.scoreboard
-    )
-
-    // Store summary in cache
-    await supabase
-      .from('ai_summaries')
-      .upsert({
-        card_id: cardId,
-        summary,
-        generated_at: new Date().toISOString()
-      })
-
-    return new Response(JSON.stringify({ summary }), { status: 200 })
+    throw new Error('No summary generated')
   } catch (error) {
     console.error('AI Summary error:', error)
-    return new Response(
-      JSON.stringify({ error: 'Failed to generate summary' }), 
+    return NextResponse.json(
+      { error: 'Failed to generate summary' },
       { status: 500 }
     )
   }

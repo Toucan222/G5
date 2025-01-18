@@ -21,10 +21,9 @@ export async function POST(req: Request) {
       .single()
 
     if (!customer) {
-      // Get user data
-      const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId)
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId)
       
-      if (error || !data.user?.email) {
+      if (!userData?.user?.email) {
         return NextResponse.json(
           { error: 'User not found' },
           { status: 404 }
@@ -33,24 +32,17 @@ export async function POST(req: Request) {
 
       // Create Stripe customer
       const stripeCustomer = await stripe.customers.create({
-        email: data.user.email,
+        email: userData.user.email,
         metadata: { user_id: userId }
       })
 
       // Store customer in database
-      const { error: insertError } = await supabaseAdmin
+      await supabaseAdmin
         .from('customers')
         .insert({
           user_id: userId,
           stripe_customer_id: stripeCustomer.id
         })
-
-      if (insertError) {
-        return NextResponse.json(
-          { error: 'Failed to create customer record' },
-          { status: 500 }
-        )
-      }
 
       customer = { stripe_customer_id: stripeCustomer.id }
     }
@@ -66,13 +58,6 @@ export async function POST(req: Request) {
         metadata: { user_id: userId }
       }
     })
-
-    if (!session.url) {
-      return NextResponse.json(
-        { error: 'Failed to create checkout session' },
-        { status: 500 }
-      )
-    }
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
