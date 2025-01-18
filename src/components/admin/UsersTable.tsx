@@ -4,19 +4,17 @@ import { Table, Badge, ActionIcon, Menu, Text } from '@mantine/core'
 import { IconDots, IconBan, IconCrown } from '@tabler/icons-react'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database'
 
-interface UserProfile {
-  id: string
-  user_id: string
-  email: string
-  role: string
-  created_at: string
-  last_sign_in: string | null
-  subscription_status?: string
+type Profile = Database['public']['Tables']['profiles']['Row']
+type Subscription = Database['public']['Tables']['subscriptions']['Row']
+
+interface UserWithSubscription extends Profile {
+  subscriptions: Pick<Subscription, 'status'>[] | null
 }
 
 interface UsersTableProps {
-  users: UserProfile[]
+  users: UserWithSubscription[]
   onUpdate: () => void
 }
 
@@ -25,19 +23,26 @@ export function UsersTable({ users, onUpdate }: UsersTableProps) {
 
   const handleRoleUpdate = async (userId: string, newRole: string) => {
     setLoading(true)
-    await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId)
-    onUpdate()
-    setLoading(false)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId)
+
+      if (error) throw error
+      onUpdate()
+    } catch (error) {
+      console.error('Error updating role:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <Table striped highlightOnHover>
       <Table.Thead>
         <Table.Tr>
-          <Table.Th>Email</Table.Th>
+          <Table.Th>ID</Table.Th>
           <Table.Th>Role</Table.Th>
           <Table.Th>Status</Table.Th>
           <Table.Th>Joined</Table.Th>
@@ -48,7 +53,7 @@ export function UsersTable({ users, onUpdate }: UsersTableProps) {
       <Table.Tbody>
         {users.map((user) => (
           <Table.Tr key={user.id}>
-            <Table.Td>{user.email}</Table.Td>
+            <Table.Td>{user.user_id}</Table.Td>
             <Table.Td>
               <Badge color={user.role === 'admin' ? 'blue' : 'gray'}>
                 {user.role}
@@ -56,9 +61,9 @@ export function UsersTable({ users, onUpdate }: UsersTableProps) {
             </Table.Td>
             <Table.Td>
               <Badge
-                color={user.subscription_status === 'active' ? 'green' : 'gray'}
+                color={user.subscriptions?.[0]?.status === 'active' ? 'green' : 'gray'}
               >
-                {user.subscription_status || 'free'}
+                {user.subscriptions?.[0]?.status || 'free'}
               </Badge>
             </Table.Td>
             <Table.Td>
