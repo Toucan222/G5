@@ -2,8 +2,9 @@
 
 import { TextInput, Button, Stack, Group, Text, Box, ActionIcon, FileInput } from '@mantine/core'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { IconPlus, IconTrash } from '@tabler/icons-react'
+import { supabase } from '@/lib/supabase'
+import { notifications } from '@mantine/notifications'
 
 interface CardFormProps {
   deckId: string
@@ -44,7 +45,7 @@ export function CardForm({ deckId, onComplete }: CardFormProps) {
     const fileName = `${Math.random()}.${fileExt}`
     const filePath = `${deckId}/${fileName}`
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError, data } = await supabase.storage
       .from('card-images')
       .upload(filePath, file)
 
@@ -52,11 +53,11 @@ export function CardForm({ deckId, onComplete }: CardFormProps) {
       throw uploadError
     }
 
-    const { data } = supabase.storage
+    const { data: urlData } = supabase.storage
       .from('card-images')
       .getPublicUrl(filePath)
 
-    return data.publicUrl
+    return urlData.publicUrl
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,29 +78,39 @@ export function CardForm({ deckId, onComplete }: CardFormProps) {
 
       const { error } = await supabase
         .from('cards')
-        .insert([
-          {
-            deck_id: deckId,
-            title,
-            image_url: imageUrl,
-            quick_facts: facts.filter(f => f.trim()),
-            scoreboard,
-            content_blocks: contentBlocks.filter(block => 
-              block.text?.trim() || block.link?.trim() || block.audio_url?.trim()
-            )
-          }
-        ])
+        .insert([{
+          deck_id: deckId,
+          title,
+          image_url: imageUrl,
+          quick_facts: facts.filter(f => f.trim()),
+          scoreboard,
+          content_blocks: contentBlocks.filter(block => 
+            block.text?.trim() || block.link?.trim() || block.audio_url?.trim()
+          )
+        }])
 
       if (error) throw error
+
+      notifications.show({
+        title: 'Success',
+        message: 'Card created successfully',
+        color: 'green'
+      })
+      
       onComplete()
     } catch (error) {
       console.error('Error creating card:', error)
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to create card',
+        color: 'red'
+      })
     }
   }
 
   return (
     <form onSubmit={handleSubmit}>
-      <Stack spacing="md">
+      <Stack gap="md">
         <TextInput
           label="Card Title"
           required
@@ -181,7 +192,7 @@ export function CardForm({ deckId, onComplete }: CardFormProps) {
         <Box>
           <Text fw={500} mb="xs">Content Blocks</Text>
           {contentBlocks.map((block, index) => (
-            <Stack key={index} mb="md">
+            <Stack key={index} mb="md" gap="sm">
               <TextInput
                 label="Text"
                 value={block.text || ''}
