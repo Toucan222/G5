@@ -1,7 +1,5 @@
-'use client'
-
 import { stripe } from '@/lib/stripe'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
@@ -16,7 +14,7 @@ export async function POST(req: Request) {
     }
 
     // Get or create Stripe customer
-    let { data: customer } = await supabase
+    let { data: customer } = await supabaseAdmin
       .from('customers')
       .select('stripe_customer_id')
       .eq('user_id', userId)
@@ -24,9 +22,9 @@ export async function POST(req: Request) {
 
     if (!customer) {
       // Get user data
-      const { data: { user } } = await supabase.auth.admin.getUserById(userId)
-
-      if (!user || !user.email) {
+      const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId)
+      
+      if (error || !data.user?.email) {
         return NextResponse.json(
           { error: 'User not found' },
           { status: 404 }
@@ -35,17 +33,24 @@ export async function POST(req: Request) {
 
       // Create Stripe customer
       const stripeCustomer = await stripe.customers.create({
-        email: user.email,
+        email: data.user.email,
         metadata: { user_id: userId }
       })
 
       // Store customer in database
-      await supabase
+      const { error: insertError } = await supabaseAdmin
         .from('customers')
         .insert({
           user_id: userId,
           stripe_customer_id: stripeCustomer.id
         })
+
+      if (insertError) {
+        return NextResponse.json(
+          { error: 'Failed to create customer record' },
+          { status: 500 }
+        )
+      }
 
       customer = { stripe_customer_id: stripeCustomer.id }
     }

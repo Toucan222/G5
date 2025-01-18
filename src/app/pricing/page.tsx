@@ -7,6 +7,7 @@ import { PricingCard } from '@/components/PricingCard'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { notifications } from '@mantine/notifications'
 
 const PRICING_PLANS = [
   {
@@ -79,6 +80,11 @@ export default function Pricing() {
       }
     } catch (error) {
       console.error('Subscription error:', error)
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to start subscription process. Please try again.',
+        color: 'red'
+      })
     } finally {
       setLoading(false)
     }
